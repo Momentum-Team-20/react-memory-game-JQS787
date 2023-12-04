@@ -1,61 +1,82 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const symbols = ["🍎", "🍌", "🍒", "🍓", "🍊", "🍇", "🍉", "🥥"];
+const symbols = ['🌟', '🍎', '🚀', '🌈', '🦄', '⚽', '🎸', '🍕'];
 
-function shuffleArray(array) {
-  const shuffledArray = [...array];
-  for (let i = shuffledArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
-  }
-  return shuffledArray;
-}
+const generateCards = () => {
+  const allCards = [...symbols, ...symbols];
+  return allCards.sort(() => Math.random() - 0.5).map((symbol, index) => ({ id: index, symbol, isFlipped: false, isMatched: false }));
+};
 
-function App() {
-  const [cards, setCards] = useState([]);
+const App = () => {
+  const [cards, setCards] = useState(generateCards());
   const [flippedCards, setFlippedCards] = useState([]);
-  const [matchedPairs, setMatchedPairs] = useState(0);
-
-  useEffect(() => {
-    const initialCards = shuffleArray([...symbols, ...symbols]);
-    setCards(initialCards);
-  }, []);
-
-  const flipCard = (index) => {
-    if (flippedCards.length < 2) {
-      setFlippedCards((prevFlippedCards) => [...prevFlippedCards, index]);
-    }
-  };
+  const [matchedPairs, setMatchedPairs] = useState([]);
+  const [congratulations, setCongratulations] = useState(false);
 
   useEffect(() => {
     if (flippedCards.length === 2) {
-      const [index1, index2] = flippedCards;
-      if (cards[index1] === cards[index2]) {
-        setMatchedPairs((prev) => prev + 1);
+      const [firstCard, secondCard] = flippedCards;
+      if (firstCard.symbol === secondCard.symbol) {
+        setMatchedPairs((prev) => [...prev, firstCard.symbol]);
+        setCards((prev) =>
+          prev.map((card) =>
+            card.id === firstCard.id || card.id === secondCard.id
+              ? { ...card, isMatched: true, isFlipped: false }
+              : card
+          )
+        );
+      } else {
+        setTimeout(() => {
+          setCards((prev) =>
+            prev.map((card) => (card.isMatched ? card : { ...card, isFlipped: false }))
+          );
+        }, 1000);
       }
-      setTimeout(() => setFlippedCards([]), 1000);
+      setFlippedCards([]);
     }
-  }, [flippedCards, cards]);
+  }, [flippedCards]);
+
+  useEffect(() => {
+    if (matchedPairs.length === symbols.length) {
+      setCongratulations(true);
+    }
+  }, [matchedPairs]);
+
+  const handleCardClick = (id) => {
+    if (flippedCards.length < 2) {
+      setFlippedCards((prev) => [...prev, cards.find((card) => card.id === id)]);
+      setCards((prev) =>
+        prev.map((card) => (card.id === id ? { ...card, isFlipped: true } : card))
+      );
+    }
+  };
+
+  const resetGame = () => {
+    setCards(generateCards());
+    setFlippedCards([]);
+    setMatchedPairs([]);
+    setCongratulations(false);
+  };
 
   return (
     <div className="App">
-      <div className="game-container">
-        {cards.map((symbol, index) => (
+      <h1>Memory Game</h1>
+      <div className="card-grid">
+        {cards.map((card) => (
           <div
-            key={index}
-            className={`card ${flippedCards.includes(index) ? 'flipped' : ''}`}
-            onClick={() => flipCard(index)}
+            key={card.id}
+            className={`card ${card.isFlipped || card.isMatched ? 'flipped' : ''}`}
+            onClick={() => !card.isFlipped && !card.isMatched && handleCardClick(card.id)}
           >
-            {flippedCards.includes(index) || matchedPairs === symbols.length ? (
-              <span>{symbol}</span>
-            ) : null}
+            {card.isFlipped || card.isMatched ? card.symbol : '❓'}
           </div>
         ))}
       </div>
-      {matchedPairs === symbols.length && <div className="win-message">Congratulations! You've matched all pairs.</div>}
+      <button onClick={resetGame}>Reset Game</button>
+      {congratulations && <p>Congratulations! You've won!</p>}
     </div>
   );
-}
+};
 
 export default App;
